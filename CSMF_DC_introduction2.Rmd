@@ -1,0 +1,168 @@
+---
+title: "Clinical Statistics Methods Forum Data Challenge"
+author: "Eric Polley & Prabin Thapa"
+date: "September 20th, 2016"
+output: beamer_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(ggplot2)
+```
+
+## Introduction
+
+The 2016 Clinical Statistics Methods Forum Data Challenge
+
+The goal is to construct a predictor of therapeutic drug dose given baseline clinical measurements. Participants given a training data set with 3,000 patients and will be evaluated on a blinded validation data set with 1,722 patients
+
+## Overview
+
+- Working in teams, n $\in$ (1, 2, \ldots, 20), use the training data to construct a predictor for the therapeutic dose given baseline clinical measurements
+- Predictors evaluated by mean squared error of predicted dose and true dose
+- With validation data set, provide predictions for each individual. A file with the Subject ID and the predicted dose as 2 columns can be email to me
+- Don't forget to include your team name
+- On Oct.\ 18th, meet for a midpoint review and group discussion
+- On Nov.\ 15th, each team will be asked to provide a short summary on how they constructed the predictor and I will reveal the  performance on the validation data
+- Everyone is welcome to attend the discussion (and drink coffee)
+- Prizes to be determined
+
+## Overview
+
+- 2 data sets provided in comma separated format
+- TRAIN.CSV includes the baseline variables and outcome of interest (Therapeutic_Dose)
+- VALID.CSV includes the baseline variables, need to predict the outcome
+- Data available on GitHub: \url{https://github.com/ecpolley/CSMF_Data_Challenge}
+
+## How To Get Data
+
+```{r loadData, echo = TRUE}
+# link to data on GitHub page if not available
+if(file.exists("TRAIN.CSV")) {
+  TRAIN <- read.csv("TRAIN.CSV")
+} else {
+  urlfile <- "https://raw.githubusercontent.com/ecpolley/
+    CSMF_Data_Challenge/master/TRAIN.CSV"
+  download.file(urlfile, destfile = "TRAIN.CSV")
+  TRAIN <- read.csv("TRAIN.CSV")
+}
+dim(TRAIN)
+```
+
+## Therapeutic_Dose
+
+```{r histogram}
+ggplot(TRAIN, aes(Therapeutic_Dose)) + geom_histogram(bins = 30) + theme(text = element_text(size=30))
+```
+
+## Baseline Variables
+```{r echo=FALSE}
+knitr::knit_hooks$set(mysize = function(before, options, envir) {
+  if (before) 
+    return(options$size)
+})
+```
+
+```{r str1, mysize = TRUE, size = '\\footnotesize', echo = TRUE}
+str(TRAIN[, 1:8])
+```
+
+## Baseline Variables
+```{r plotAge, out.width='5.5cm', out.height='7cm', fig.show='hold'}
+ggplot(TRAIN, aes(x = Age, y = Therapeutic_Dose)) + geom_boxplot() + theme(text = element_text(size=30))
+ggplot(TRAIN, aes(x = Gender, y = Therapeutic_Dose)) + geom_boxplot() + theme(text = element_text(size=30))
+```
+
+
+## Baseline Variables
+
+```{r str2, mysize = TRUE, size = '\\footnotesize', echo = TRUE}
+str(TRAIN[, 9:12])
+```
+
+## Baseline Variables
+
+```{r str3, mysize = TRUE, size = '\\footnotesize', echo = TRUE}
+str(TRAIN[, 13:29])
+```
+
+## Baseline Variables
+
+```{r str4, mysize = TRUE, size = '\\footnotesize', echo = TRUE}
+str(TRAIN[, 30:33])
+```
+
+## Baseline Variables
+
+```{r str5, mysize = TRUE, size = '\\footnotesize', echo = TRUE}
+str(TRAIN[, 34:43])
+```
+
+## Basic Regression Predictor
+
+```{r lmFit, mysize = TRUE, size = '\\footnotesize', echo = TRUE}
+fit <- lm(Therapeutic_Dose ~ Age + Gender + 
+            Biomarker_1 + Biomarker_2, data = TRAIN)
+fit
+```
+
+
+<!-- ## Basic Regression Predictor -->
+
+<!-- ```{r lmFit3, mysize = TRUE, size = '\\footnotesize', echo = TRUE} -->
+<!-- mean((predict(fit) - TRAIN$Therapeutic_Dose)^2) -->
+<!-- ``` -->
+
+## How To Get Data
+
+```{r loadData2, echo = TRUE}
+# link to data on GitHub page if not available
+if(file.exists("VALID.CSV")) {
+  VALID <- read.csv("VALID.CSV")
+} else {
+  urlfile <- "https://raw.githubusercontent.com/ecpolley/
+    CSMF_Data_Challenge/master/VALID.CSV"
+  download.file(urlfile, destfile = "VALID.CSV")
+  VALID <- read.csv("VALID.CSV")
+}
+dim(VALID)
+```
+
+## Basic Regression Predictor
+
+```{r lmPred, echo = TRUE}
+pred_lm <- predict(fit, newdata = VALID)
+pred_lm_df <- data.frame(ID = VALID$Subject_ID, predict = pred_lm)
+head(pred_lm_df)
+# write out prediction table
+# write.csv(pred_lm_df, "final_predictions.csv")  
+```
+
+## Cross-Validation
+Prior to submitting predictions, should evaluate performance
+```{r cv, echo = TRUE}
+## get V-fold CV estimate of MSE
+V <- 10
+N <- nrow(TRAIN)
+MSE_cv <- rep(NA, V)  # placeholder for CV MSE estimates
+# list of row ids by V validation splits
+validRows <- split(sample(1:N), rep(1:V, length=N)) 
+for(v in seq(V)) {
+  tempTRAIN <- TRAIN[-validRows[[v]], ]
+  tempVALID <- TRAIN[validRows[[v]], ]
+  fit_cv <- lm(Therapeutic_Dose ~ Age + Gender + 
+            Biomarker_1 + Biomarker_2, data = tempTRAIN)
+  pred_cv <- predict(fit, newdata = tempVALID)
+  MSE_cv[v] <- mean((pred_cv - tempVALID$Therapeutic_Dose)^2)
+}
+```
+
+## Cross-Validation
+```{r cv_output, echo = TRUE}
+# get V-fold CV estimate of MSE
+summary(MSE_cv)
+# CV R-squared
+1 - mean(MSE_cv)/var(TRAIN$Therapeutic_Dose)
+```
+
+## Questions?
