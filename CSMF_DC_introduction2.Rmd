@@ -152,7 +152,7 @@ for(v in seq(V)) {
   tempVALID <- TRAIN[validRows[[v]], ]
   fit_cv <- lm(Therapeutic_Dose ~ Age + Gender + 
             Biomarker_1 + Biomarker_2, data = tempTRAIN)
-  pred_cv <- predict(fit, newdata = tempVALID)
+  pred_cv <- predict(fit_cv, newdata = tempVALID)
   MSE_cv[v] <- mean((pred_cv - tempVALID$Therapeutic_Dose)^2)
 }
 ```
